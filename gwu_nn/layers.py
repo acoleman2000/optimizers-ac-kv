@@ -30,6 +30,18 @@ def apply_activation_backward(backward_pass):
         return backward_pass(args[0], output_error, learning_rate)
     return wrapper
 
+def apply_adam_activation_backward(backward_pass):
+    """Decorator that ensures that a layer's activation function's derivative is applied before the layer during
+    backwards propagation.
+    """
+    def wrapper(*args):
+        output_error = args[1]
+        learning_rate = args[2]
+        if args[0].activation:
+            output_error = args[0].activation.backward_propagation(output_error, learning_rate)
+        return backward_pass(args[0], output_error, learning_rate)
+    return wrapper
+
 
 class Layer():
     """The Layer layer is an abstract object used to define the template
@@ -51,6 +63,11 @@ class Layer():
 
     @apply_activation_backward
     def backward_propogation(cls, output_error, learning_rate):
+        """:noindex:"""
+        pass
+    
+    @apply_adam_activation_backward
+    def adam_backward_propogation(cls, output_error, learning_rate):
         """:noindex:"""
         pass
 
@@ -106,6 +123,25 @@ class Dense(Layer):
     @apply_activation_backward
     def backward_propagation(self, output_error, learning_rate):
         """Applies the backward propagation for a densely connected layer. This will calculate the output error
+         (dot product of the output_error and the layer's weights) and will calculate the update gradient for the
+         weights (dot product of the layer's input values and the output_error).
+
+        Args:
+            output_error (np.array): The gradient of the error up to this point in the network.
+
+        Returns:
+            np.array(float): The gradient of the error up to and including this layer."""
+        input_error = np.dot(output_error, self.weights.T)
+        weights_error = np.dot(self.input.T, output_error)
+
+        self.weights -= learning_rate * weights_error
+        if self.add_bias:
+            self.bias -= learning_rate * output_error
+        return input_error
+
+    @apply_adam_activation_backward
+    def adam_backward_propagation(self, output_error, learning_rate):
+        """Applies the adam optimizer backward propagation for a densely connected layer. This will calculate the output error
          (dot product of the output_error and the layer's weights) and will calculate the update gradient for the
          weights (dot product of the layer's input values and the output_error).
 
