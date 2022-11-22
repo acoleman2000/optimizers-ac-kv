@@ -52,7 +52,7 @@ def apply_sgd_activation_backward(backward_pass):
         learning_rate = args[2]
         if args[0].activation:
             output_error = args[0].activation.backward_propagation(output_error, learning_rate)
-        return sgd_backward_pass(args[0], output_error, learning_rate)
+        return backward_pass(args[0], output_error, learning_rate)
     return wrapper
 
 
@@ -179,7 +179,7 @@ class Dense(Layer):
          
     @apply_sgd_activation_backward
     def sgd_backward_propagation(self, output_error, learning_rate):
-        """Applies the backward propagation using SDG for a densely connected layer. This will calculate the output error
+        """Applies the backward propagation using SGD for a densely connected layer. This will calculate the output error
          (dot product of the output_error and the layer's weights) and will calculate the update gradient for the
          weights.
 
