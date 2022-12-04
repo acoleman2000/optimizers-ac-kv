@@ -207,15 +207,16 @@ class Dense(Layer):
         #self.biasVariance = self.B2 * self.biasVariance + (1-self.B2)*(self.bias)
 
         #correct for bias
-        meanWeightCorrection = self.weightMean/(1-self.B1**self.iterations + self.e)
-        varianceWeightCorrection = abs(self.weightVariance/(1-self.B2**self.iterations + self.e))
+        meanWeightCorrection = self.weightMean/(1-self.B1**self.iterations - self.e)
+        varianceWeightCorrection = self.weightVariance/(1-self.B2**self.iterations - self.e)
 
         #update weights in the ADAM way:
-        self.weights -= self.lr * (meanWeightCorrection/np.sqrt(varianceWeightCorrection) + self.e)
+        self.weights -= learning_rate * (meanWeightCorrection/np.sqrt(varianceWeightCorrection) + self.e)
 
         if self.add_bias:
             self.bias -= learning_rate * output_error
-        self.iterations+=1
+
+        self.iterations += 1
         return input_error
 
     @apply_sgd_activation_backward
