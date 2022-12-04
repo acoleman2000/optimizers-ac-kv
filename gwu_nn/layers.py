@@ -190,7 +190,7 @@ class Dense(Layer):
 
         #Calculates output error
         input_error = np.dot(output_error, self.weights.T)
-        
+
         #Calculates update gradient
         weights_error = np.dot(self.input.T, output_error)
 
@@ -207,14 +207,15 @@ class Dense(Layer):
         #self.biasVariance = self.B2 * self.biasVariance + (1-self.B2)*(self.bias)
 
         #correct for bias
-        meanWeightCorrection = self.weightMean/(1-self.B1**self.iterations)
-        varianceWeightCorrection = self.varianceMean/(1-self.B2**self.iterations)
+        meanWeightCorrection = self.weightMean/(1-self.B1**self.iterations + self.e)
+        varianceWeightCorrection = abs(self.weightVariance/(1-self.B2**self.iterations + self.e))
 
         #update weights in the ADAM way:
         self.weights -= self.lr * (meanWeightCorrection/np.sqrt(varianceWeightCorrection) + self.e)
-        
+
         if self.add_bias:
             self.bias -= learning_rate * output_error
+        self.iterations+=1
         return input_error
 
     @apply_sgd_activation_backward
@@ -228,6 +229,7 @@ class Dense(Layer):
 
         Returns:
             np.array(float): The gradient of the error up to and including this layer."""
+
         input_error = np.dot(output_error, self.weights.T)
         temp_input = self.input
         np.random.shuffle(temp_input)
