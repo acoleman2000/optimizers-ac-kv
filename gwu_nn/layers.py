@@ -96,13 +96,31 @@ class Dense(Layer):
     nodes in the previous layer and N = number of nodes in the current layer.
     """
 
-    def __init__(self, output_size, add_bias=False, activation=None, input_size=None):
+    def __init__(self, output_size, add_bias=False, activation=None, input_size=None, lr=0.01, B1=0.9, B2=0.999, e=1e-8):
         super().__init__(activation)
         self.type = None
         self.name = "Dense"
         self.input_size = input_size
         self.output_size = output_size
         self.add_bias = add_bias
+
+        #Here, we start setting our original variables for adam
+        #First, we handle mean and variance of the weights:
+        self.weightMean, self.weightVariance = 0, 0
+
+        #Then, we handle mean and variance of the bias
+        self.biasMean, self.biasVariance = 0, 0
+
+        #Let's instantiate the decay rates for our B1 and B2
+        self.B1, self.B2 = B1, B2
+
+        #Define an epsilon value to ensure we don't divide by 0
+        self.e = e
+
+        #Define learning rate
+        self.lr = lr
+
+        self.iterations = 0
 
 
     def init_weights(self, input_size):
@@ -169,10 +187,32 @@ class Dense(Layer):
         Returns:
             np.array(float): The gradient of the error up to and including this layer."""
 
+
+        #Calculates output error
         input_error = np.dot(output_error, self.weights.T)
+        
+        #Calculates update gradient
         weights_error = np.dot(self.input.T, output_error)
 
-        self.weights -= learning_rate * weights_error
+        #let's calculate the momentum for B1
+        #weights
+        self.weightMean = self.B1 * self.weightMean + (1-self.B1) * weights_error
+        #biases (needs the add_bias parameter to be true)
+        #self.biasMean = self.B1 * self.biasMean + (1-self.B1) * self.bias
+
+        #time to calculate the updated variances
+        #weights
+        self.weightVariance = self.B2 * self.weightVariance + (1-self.B2)*(weights_error**2)
+        #biases (needs the add_bias parameter to be true)
+        #self.biasVariance = self.B2 * self.biasVariance + (1-self.B2)*(self.bias)
+
+        #correct for bias
+        meanWeightCorrection = self.weightMean/(1-self.B1**self.iterations)
+        varianceWeightCorrection = self.varianceMean/(1-self.B2**self.iterations)
+
+        #update weights in the ADAM way:
+        self.weights -= self.lr * (meanWeightCorrection/np.sqrt(varianceWeightCorrection) + self.e)
+        
         if self.add_bias:
             self.bias -= learning_rate * output_error
         return input_error
