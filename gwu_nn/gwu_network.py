@@ -15,7 +15,7 @@ class GWUNetwork():
     def add(self, layer):
         """A network is comprised of a series of layers connected together. The
         add method provides a means to add a layer to a network
-        
+
         Args:
             Layer (Layer): A Layer object to add to the network
         """
@@ -27,7 +27,7 @@ class GWUNetwork():
 
     def get_weights(self):
         """Get the weights for the model
-        
+
         Returns:
             np.array: weights of the model
         """
@@ -39,7 +39,7 @@ class GWUNetwork():
     def compile(self, loss, lr):
         """Compile sets a model's loss function and learning rate, preparing the
         model for training
-        
+
         Args:
             loss (LossFunction): The loss function used for the network
             lr (float): The learning rate for the network"""
@@ -54,14 +54,14 @@ class GWUNetwork():
     # predict output for given input
     def predict(self, input_data):
         """Predict produces predictions for the provided input data
-        
+
         Args:
             input_data (np.array): Input data to inference
-        
+
         Returns:
             np.array: the predictions for the given model
         """
-        
+
         # Run through the layers
         output = input_data
         for layer in self.layers:
@@ -75,9 +75,9 @@ class GWUNetwork():
         return loss
 
     # train the network
-    def fit(self, x_train, y_train, epochs, batch_size=None):
+    def fit(self, x_train, y_train, epochs, optimizer = "GD", batch_size=None):
         """Fit is the trianing loop for the model/network
-        
+
         Args:
             x_train (np.array): Inputs for the network to train on
             y_train (np.array): Expected outputs for the network
@@ -104,13 +104,18 @@ class GWUNetwork():
                 # backward propagation
                 error = self.loss_prime(y_true, output)
                 for layer in reversed(self.layers):
-                    error = layer.backward_propagation(error, self.learning_rate)
+                    if optimizer == "GD":
+                        error = layer.backward_propagation(error, self.learning_rate)
+                    elif optimizer == "ADAM":
+                        error = layer.adam_backward_propagation(error, self.learning_rate)
+                    elif optimizer == "SGD":
+                        error = layer.sgd_backward_propagation(error, self.learning_rate)
 
             # calculate average error on all samples
             if i % 10 == 0 and i != 0:
                 err /= batch_count
                 print(f'epoch {i}/{epochs}   error={err}')
-                
+
     def __repr__(self):
         rep = "Model:"
 

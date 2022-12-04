@@ -78,7 +78,7 @@ class Layer():
     def backward_propogation(cls, output_error, learning_rate):
         """:noindex:"""
         pass
-    
+
     @apply_adam_activation_backward
     def adam_backward_propogation(cls, output_error, learning_rate):
         """:noindex:"""
@@ -150,8 +150,8 @@ class Dense(Layer):
         Returns:
             np.array(float): The gradient of the error up to and including this layer."""
         input_error = np.dot(output_error, self.weights.T)
-        weights_error = np.dot(self.input.T, output_error)
 
+        weights_error = np.dot(self.input.T, output_error)
         self.weights -= learning_rate * weights_error
         if self.add_bias:
             self.bias -= learning_rate * output_error
@@ -162,7 +162,7 @@ class Dense(Layer):
         """Applies the adam optimizer backward propagation for a densely connected layer. This will calculate the output error
          (dot product of the output_error and the layer's weights) and will calculate the update gradient for the
          weights (dot product of the layer's input values and the output_error).
-         
+
         Args:
             output_error (np.array): The gradient of the error up to this point in the network.
 
@@ -176,7 +176,7 @@ class Dense(Layer):
         if self.add_bias:
             self.bias -= learning_rate * output_error
         return input_error
-         
+
     @apply_sgd_activation_backward
     def sgd_backward_propagation(self, output_error, learning_rate):
         """Applies the backward propagation using SGD for a densely connected layer. This will calculate the output error
@@ -188,5 +188,13 @@ class Dense(Layer):
 
         Returns:
             np.array(float): The gradient of the error up to and including this layer."""
+        input_error = np.dot(output_error, self.weights.T)
+        temp_input = self.input
+        np.random.shuffle(temp_input)
 
-        pass
+        weights_error = np.dot(self.input.T[:1, :], output_error)
+
+        self.weights -= learning_rate * weights_error
+        if self.add_bias:
+            self.bias -= learning_rate * output_error
+        return input_error
