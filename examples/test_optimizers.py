@@ -35,11 +35,13 @@ network.fit(X_train, y_train, optimizer="GD",batch_size=100, epochs=100)
 end = time.time()
 print("Time for GD in seconds %ds"%(end - start))
 print(network.evaluate(X_train, y_train))
+'''
 start = time.time()
 network.fit(X_train, y_train, optimizer="SGD",batch_size=10, epochs=100)
 end = time.time()
 print("Time for SGD in seconds %ds"%(end - start))
 print(network.evaluate(X_train, y_train))
+'''
 start = time.time()
 network.fit(X_train, y_train, optimizer="ADAM",batch_size=10, epochs=100)
 end = time.time()

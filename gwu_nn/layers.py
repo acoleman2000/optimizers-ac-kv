@@ -37,9 +37,10 @@ def apply_adam_activation_backward(backward_pass):
     def wrapper(*args):
         output_error = args[1]
         learning_rate = args[2]
+        iteration = args[3]
         if args[0].activation:
             output_error = args[0].activation.backward_propagation(output_error, learning_rate)
-        return backward_pass(args[0], output_error, learning_rate)
+        return backward_pass(args[0], output_error, learning_rate, iteration)
     return wrapper
 
 
@@ -80,7 +81,7 @@ class Layer():
         pass
 
     @apply_adam_activation_backward
-    def adam_backward_propogation(cls, output_error, learning_rate):
+    def adam_backward_propogation(cls, output_error, learning_rate, iteration):
         """:noindex:"""
         pass
 
@@ -96,7 +97,7 @@ class Dense(Layer):
     nodes in the previous layer and N = number of nodes in the current layer.
     """
 
-    def __init__(self, output_size, add_bias=False, activation=None, input_size=None, lr=0.01, B1=0.9, B2=0.999, e=1e-8):
+    def __init__(self, output_size, add_bias=False, activation=None, input_size=None, B1=0.9, B2=0.999, e=1e-8):
         super().__init__(activation)
         self.type = None
         self.name = "Dense"
@@ -117,11 +118,14 @@ class Dense(Layer):
         #Define an epsilon value to ensure we don't divide by 0
         self.e = e
 
+<<<<<<< HEAD
         #Define learning rate
         self.lr = lr
 
         self.iterations = 1
 
+=======
+>>>>>>> cc0a7539a9674f5a49871db040d352e6b8c5c3cd
 
     def init_weights(self, input_size):
         """Initialize the weights for the layer based on input and output size
@@ -176,7 +180,7 @@ class Dense(Layer):
         return input_error
 
     @apply_adam_activation_backward
-    def adam_backward_propagation(self, output_error, learning_rate):
+    def adam_backward_propagation(self, output_error, learning_rate, iteration):
         """Applies the adam optimizer backward propagation for a densely connected layer. This will calculate the output error
          (dot product of the output_error and the layer's weights) and will calculate the update gradient for the
          weights (dot product of the layer's input values and the output_error).
@@ -187,6 +191,9 @@ class Dense(Layer):
         Returns:
             np.array(float): The gradient of the error up to and including this layer."""
 
+
+        #TODO Figure out learning rate
+        learning_rate = .0005
 
         #Calculates output error
         input_error = np.dot(output_error, self.weights.T)
@@ -207,16 +214,15 @@ class Dense(Layer):
         #self.biasVariance = self.B2 * self.biasVariance + (1-self.B2)*(self.bias)
 
         #correct for bias
-        meanWeightCorrection = self.weightMean/(1-self.B1**self.iterations - self.e)
-        varianceWeightCorrection = self.weightVariance/(1-self.B2**self.iterations - self.e)
+        meanWeightCorrection = self.weightMean/(1-self.B1**(iteration+1))
+        varianceWeightCorrection = self.weightVariance/(1-self.B2**(iteration+1))
 
         #update weights in the ADAM way:
-        self.weights -= learning_rate * (meanWeightCorrection/np.sqrt(varianceWeightCorrection) + self.e)
+        self.weights -= learning_rate * (meanWeightCorrection/(np.sqrt(varianceWeightCorrection) + self.e))
 
         if self.add_bias:
             self.bias -= learning_rate * output_error
 
-        self.iterations += 1
         return input_error
 
     @apply_sgd_activation_backward
