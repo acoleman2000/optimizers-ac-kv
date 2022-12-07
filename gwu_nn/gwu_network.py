@@ -110,7 +110,7 @@ class GWUNetwork():
                     if optimizer == "GD":
                         error = layer.backward_propagation(error, self.learning_rate)
                     elif optimizer == "ADAM":
-                        error = layer.adam_backward_propagation(error, self.learning_rate)
+                        error = layer.adam_backward_propagation(error, self.learning_rate, j)
                     elif optimizer == "SGD":
                         error = layer.backward_propagation(error, self.learning_rate)
 
