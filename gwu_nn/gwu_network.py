@@ -91,7 +91,6 @@ class GWUNetwork():
             err = 0
             batch_count = 0
             if optimizer == "SGD":
-                batch_size = 1
                 np.random.shuffle(x_train)
             for j in range(0, len(x_train), batch_size):
                 # forward propagation
@@ -113,7 +112,7 @@ class GWUNetwork():
                         error = layer.adam_backward_propagation(error, self.learning_rate)
                     elif optimizer == "SGD":
                         error = layer.backward_propagation(error, self.learning_rate)
-
+                        # self.learning_rate /= 1.1
             # calculate average error on all samples
             if i % 10 == 0 and i != 0:
                 err /= batch_count

@@ -120,7 +120,7 @@ class Dense(Layer):
         #Define learning rate
         self.lr = lr
 
-        self.iterations = 0
+        self.iterations = 1
 
 
     def init_weights(self, input_size):
@@ -232,10 +232,7 @@ class Dense(Layer):
             np.array(float): The gradient of the error up to and including this layer."""
 
         input_error = np.dot(output_error, self.weights.T)
-        temp_input = self.input
-        np.random.shuffle(temp_input)
-
-        weights_error = np.dot(self.input.T[:1, :], output_error)
+        weights_error = np.dot(self.input.T[:1,:], output_error)
 
         self.weights -= learning_rate * weights_error
         if self.add_bias:
