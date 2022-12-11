@@ -24,6 +24,18 @@ class GWUNetwork():
         else:
             layer.init_weights(layer.input_size)
         self.layers.append(layer)
+    def add_seeded(self, layer, seed):
+        """A network is comprised of a series of layers connected together. The
+        add method provides a means to add a layer to a network
+
+        Args:
+            Layer (Layer): A Layer object to add to the network
+        """
+        if len(self.layers) > 0:
+            layer.init_weights_seeded(self.layers[-1].output_size, seed)
+        else:
+            layer.init_weights_seeded(layer.input_size, seed)
+        self.layers.append(layer)
 
     def get_weights(self):
         """Get the weights for the model
@@ -90,6 +102,7 @@ class GWUNetwork():
         for i in range(epochs):
             err = 0
             batch_count = 0
+            # If optimizer is Stochastic gradient descent, randomly shuffle the input
             if optimizer == "SGD":
                 np.random.shuffle(x_train)
             for j in range(0, len(x_train), batch_size):
@@ -106,13 +119,20 @@ class GWUNetwork():
                 # backward propagation
                 error = self.loss_prime(y_true, output)
                 for layer in reversed(self.layers):
+                    # Apply appropriate backward propogation depending on optimizer selected
                     if optimizer == "GD":
                         error = layer.backward_propagation(error, self.learning_rate)
                     elif optimizer == "ADAM":
                         error = layer.adam_backward_propagation(error, self.learning_rate, j)
                     elif optimizer == "SGD":
-                        error = layer.backward_propagation(error, self.learning_rate)
-                        # self.learning_rate /= 1.1
+                        error = layer.sgd_backward_propagation(error, self.learning_rate, False)
+                    elif optimizer == "SGD w/ momentum":
+                        error = layer.sgd_backward_propagation(error, self.learning_rate, True)
+                    elif optimizer == "RMSprop":
+                        error = layer.rms_prop_backward_propagation(error, self.learning_rate)
+                    elif optimizer == "Adadelta":
+                        error = layer.adadelta_backward_propagation(error, self.learning_rate)
+
             # calculate average error on all samples
             if i % 10 == 0 and i != 0:
                 err /= batch_count

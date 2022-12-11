@@ -51,10 +51,37 @@ def apply_sgd_activation_backward(backward_pass):
     def wrapper(*args):
         output_error = args[1]
         learning_rate = args[2]
+        momentum = args[3]
+        if args[0].activation:
+            output_error = args[0].activation.backward_propagation(output_error, learning_rate)
+        return backward_pass(args[0], output_error, learning_rate, momentum)
+    return wrapper
+
+def apply_rms_prop_activation_backward(backward_pass):
+    """Decorator that ensures that a layer's activation function's derivative is applied before the layer during
+    backwards propagation.
+    """
+    def wrapper(*args):
+        output_error = args[1]
+        learning_rate = args[2]
         if args[0].activation:
             output_error = args[0].activation.backward_propagation(output_error, learning_rate)
         return backward_pass(args[0], output_error, learning_rate)
     return wrapper
+
+def apply_adadelta_activavtion_backward(backward_pass):
+    """Decorator that ensures that a layer's activation function's derivative is applied before the layer during
+    backwards propagation.
+    """
+    def wrapper(*args):
+        output_error = args[1]
+        learning_rate = args[2]
+        if args[0].activation:
+            output_error = args[0].activation.backward_propagation(output_error, learning_rate)
+        return backward_pass(args[0], output_error, learning_rate)
+    return wrapper
+
+
 
 
 class Layer():
@@ -86,10 +113,21 @@ class Layer():
         pass
 
     @apply_activation_backward
-    def sgd_backward_propogation(cls, output_error, learning_rate):
+    def sgd_backward_propogation(cls, output_error, learning_rate, momentum):
         """:noindex:"""
         pass
 
+
+    @apply_rms_prop_activation_backward
+    def rms_prop_backward_propogation(cls, output_error, learning_rate):
+        """:noindex:"""
+        pass
+
+
+    @apply_adadelta_activavtion_backward
+    def adadelta_backward_propogation(cls, output_error, learning_rate):
+        """:noindex:"""
+        pass
 
 class Dense(Layer):
     """The Dense layer class creates a layer that is fully connected with the previous
@@ -97,7 +135,7 @@ class Dense(Layer):
     nodes in the previous layer and N = number of nodes in the current layer.
     """
 
-    def __init__(self, output_size, add_bias=False, activation=None, input_size=None, B1=0.9, B2=0.999, e=1e-8):
+    def __init__(self, output_size, add_bias=False, activation=None, input_size=None, B1=0.9, B2=0.999, e=1e-8, decay = 0.9):
         super().__init__(activation)
         self.type = None
         self.name = "Dense"
@@ -118,14 +156,18 @@ class Dense(Layer):
         #Define an epsilon value to ensure we don't divide by 0
         self.e = e
 
-<<<<<<< HEAD
-        #Define learning rate
-        self.lr = lr
+        #Define a decay paramater for RMSprop
+        self.decay = decay
 
-        self.iterations = 1
 
-=======
->>>>>>> cc0a7539a9674f5a49871db040d352e6b8c5c3cd
+        # Define variable to track previous running average of squared gradient, start at 0
+        self.eg = 0
+
+        # Define variable to track previous running average of sqaured paramter updates, start at 0
+        self.e_theta = 0
+
+        # Define variable to track current update vector for SGD with momentum
+        self.vt = 0
 
     def init_weights(self, input_size):
         """Initialize the weights for the layer based on input and output size
@@ -133,6 +175,24 @@ class Dense(Layer):
         Args:
             input_size (numpy array): dimensions for the input array
         """
+        if self.input_size is None:
+            self.input_size = input_size
+
+        self.weights = np.random.randn(input_size, self.output_size) / np.sqrt(input_size + self.output_size)
+
+        # TODO: Batching of inputs has broken how bias works. Need to address in next iteration
+        if self.add_bias:
+            self.bias = np.random.randn(1, self.output_size) / np.sqrt(input_size + self.output_size)
+
+    def init_weights_seeded(self, input_size, random_seed):
+        """Initialize the weights for the layer based on input and output size
+
+        Args:
+            input_size (numpy array): dimensions for the input array
+        """
+
+        np.random.seed(seed=random_seed)
+
         if self.input_size is None:
             self.input_size = input_size
 
@@ -191,10 +251,6 @@ class Dense(Layer):
         Returns:
             np.array(float): The gradient of the error up to and including this layer."""
 
-
-        #TODO Figure out learning rate
-        learning_rate = .0005
-
         #Calculates output error
         input_error = np.dot(output_error, self.weights.T)
 
@@ -226,7 +282,7 @@ class Dense(Layer):
         return input_error
 
     @apply_sgd_activation_backward
-    def sgd_backward_propagation(self, output_error, learning_rate):
+    def sgd_backward_propagation(self, output_error, learning_rate, momentum = True):
         """Applies the backward propagation using SGD for a densely connected layer. This will calculate the output error
          (dot product of the output_error and the layer's weights) and will calculate the update gradient for the
          weights.
@@ -240,7 +296,82 @@ class Dense(Layer):
         input_error = np.dot(output_error, self.weights.T)
         weights_error = np.dot(self.input.T[:1,:], output_error)
 
-        self.weights -= learning_rate * weights_error
+        # Set tentative update
+        self.theta = learning_rate * weights_error
+
+        # If using momentum, change update using update vector
+        if momentum:
+            self.vt = self.decay * self.vt + self.theta
+            self.theta = self.vt
+
+        self.weights -= self.theta
         if self.add_bias:
             self.bias -= learning_rate * output_error
+        return input_error
+
+    @apply_rms_prop_activation_backward
+    def rms_prop_backward_propagation(self, output_error, learning_rate):
+        """Applies the backward propagation using RMSprop for a densely connected layer. This will calculate the output error
+         (dot product of the output_error and the layer's weights) and will calculate the update gradient for the
+         weights.
+
+        Args:
+            output_error (np.array): The gradient of the error up to this point in the network.
+
+        Returns:
+            np.array(float): The gradient of the error up to and including this layer."""
+
+        input_error = np.dot(output_error, self.weights.T)
+        weights_error = np.dot(self.input.T[:1,:], output_error)
+
+        # Update running average of squared gradients with current squared gradient
+        self.eg = self.decay * self.eg + (1 - self.decay) * np.power(weights_error,2)
+
+        # Update weights according to update equation for RMSprop
+        self.weights -=  learning_rate / (np.sqrt(self.eg + self.e)) * weights_error
+
+        if self.add_bias:
+            self.bias -= learning_rate * output_error
+        return input_error
+
+
+    @apply_adadelta_activavtion_backward
+    def adadelta_backward_propagation(self, output_error, learning_rate):
+        """Applies the backward propagation using Adadelta for a densely connected layer. This will calculate the output error
+         (dot product of the output_error and the layer's weights) and will calculate the update gradient for the
+         weights.
+
+        Args:
+            output_error (np.array): The gradient of the error up to this point in the network.
+
+        Returns:
+            np.array(float): The gradient of the error up to and including this layer."""
+
+        input_error = np.dot(output_error, self.weights.T)
+        weights_error = np.dot(self.input.T[:1,:], output_error)
+
+        # Updating running average of squared gradients using current squared gradient
+        self.eg = self.decay * self.eg + (1 - self.decay) * np.power(weights_error,2)
+
+        # Calculate root mean squared (RMS) error of gradient AFTER running average has been updated
+        rms_eg = np.sqrt(self.eg + self.e)
+
+        # Calculate RMS error of paramater updates BEFORE new running average has been updated (RMS at time step t - 1 for future weights update)
+        rms_e_theta = np.sqrt(self.e_theta + self.e)
+
+        # Caclulate theta to update runninga verage of squared paramater updates
+        delta_theta = - learning_rate / (rms_eg) * weights_error
+
+        # Update running average of squared paramater updates using current squared paramater update
+        self.e_theta = self.decay * self.e_theta + (1 - self.decay) * np.power(delta_theta,2)
+
+        # Calculate paramater update for weights
+        delta_theta = (rms_e_theta / rms_eg) * weights_error
+
+        # Update weights
+        self.weights -= delta_theta
+
+        if self.add_bias:
+            self.bias -= learning_rate * output_error
+
         return input_error
