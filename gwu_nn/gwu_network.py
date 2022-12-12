@@ -87,7 +87,7 @@ class GWUNetwork():
         return loss
 
     # train the network
-    def fit(self, x_train, y_train, epochs, optimizer = "GD", batch_size=None):
+    def fit(self, x_train, y_train, epochs, optimizer = "GD", batch_size=None, lr_decay=False, lr_decay_rate=1):
         """Fit is the trianing loop for the model/network
 
         Args:
@@ -105,6 +105,11 @@ class GWUNetwork():
             # If optimizer is Stochastic gradient descent, randomly shuffle the input
             if optimizer == "SGD":
                 np.random.shuffle(x_train)
+
+            # If learning rate decay is active, calculate the new learning rate
+            if lr_decay:
+                    self.learning_rate = (1/(1+lr_decay_rate*i)) * self.learning_rate
+
             for j in range(0, len(x_train), batch_size):
                 # forward propagation
                 output = x_train[j:j+batch_size]
@@ -118,6 +123,7 @@ class GWUNetwork():
 
                 # backward propagation
                 error = self.loss_prime(y_true, output)
+                
                 for layer in reversed(self.layers):
                     # Apply appropriate backward propogation depending on optimizer selected
                     if optimizer == "GD":
@@ -132,6 +138,7 @@ class GWUNetwork():
                         error = layer.rms_prop_backward_propagation(error, self.learning_rate)
                     elif optimizer == "Adadelta":
                         error = layer.adadelta_backward_propagation(error, self.learning_rate)
+                
 
             # calculate average error on all samples
             if i % 10 == 0 and i != 0:

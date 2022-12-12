@@ -251,23 +251,17 @@ class Dense(Layer):
         Returns:
             np.array(float): The gradient of the error up to and including this layer."""
 
-        #Calculates output error
+        #Calculates error
         input_error = np.dot(output_error, self.weights.T)
 
         #Calculates update gradient
         weights_error = np.dot(self.input.T, output_error)
 
-        #let's calculate the momentum for B1
-        #weights
+        #let's calculate the momentum for B1 weights
         self.weightMean = self.B1 * self.weightMean + (1-self.B1) * weights_error
-        #biases (needs the add_bias parameter to be true)
-        #self.biasMean = self.B1 * self.biasMean + (1-self.B1) * self.bias
 
-        #time to calculate the updated variances
-        #weights
+        #time to calculate the updated variances weights
         self.weightVariance = self.B2 * self.weightVariance + (1-self.B2)*(weights_error**2)
-        #biases (needs the add_bias parameter to be true)
-        #self.biasVariance = self.B2 * self.biasVariance + (1-self.B2)*(self.bias)
 
         #correct for bias
         meanWeightCorrection = self.weightMean/(1-self.B1**(iteration+1))
